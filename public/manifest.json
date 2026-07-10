@@ -1,0 +1,14 @@
+{
+  "name": "Triathlete Energy Tracker",
+  "short_name": "TriEnergy",
+  "description": "Local triathlon energy system analysis for coaching decisions",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "icons": [
+  ],
+  "categories": ["sports", "fitness", "health"],
+  "screenshots": []
+}
