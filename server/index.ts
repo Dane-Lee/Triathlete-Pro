@@ -1,6 +1,7 @@
 import { createServer, IncomingMessage, ServerResponse } from 'node:http';
 import { URL } from 'node:url';
 import { AppDatabase } from './db';
+import { EcosystemSync } from './ecosystemSync';
 import {
   CalibrationTest,
   CoefficientSet,
@@ -13,6 +14,7 @@ import {
 const port = Number(process.env.TRIATHLETE_API_PORT ?? 8787);
 const dbPath = process.env.TRIATHLETE_DB_PATH ?? './data/triathlete.sqlite';
 const db = new AppDatabase(dbPath);
+const ecosystemSync = new EcosystemSync(db);
 
 type Handler = (ctx: RequestContext) => Promise<unknown> | unknown;
 
@@ -136,7 +138,11 @@ const routes = [
     return db.listSessions(user, athleteId);
   }),
 
-  route('POST', /^\/sessions$/, (ctx) => db.createSession(requireUser(ctx), requireBody<TrainingSessionInput>(ctx))),
+  route('POST', /^\/sessions$/, (ctx) => {
+    const session = db.createSession(requireUser(ctx), requireBody<TrainingSessionInput>(ctx));
+    ecosystemSync.emitSenti('session_imported', 'operational');
+    return session;
+  }),
 
   route('PUT', /^\/sessions\/([^/]+)$/, (ctx) => {
     const id = ctx.url.pathname.split('/')[2];
@@ -166,7 +172,9 @@ const routes = [
   route('POST', /^\/readiness\/calculate$/, (ctx) => {
     const body = requireBody<{ athleteId: string; date?: string }>(ctx);
     if (!body.athleteId) throw new HttpError(400, 'athleteId is required.');
-    return db.calculateAndStoreReadiness(requireUser(ctx), body.athleteId, body.date ?? new Date().toISOString().slice(0, 10));
+    const snapshot = db.calculateAndStoreReadiness(requireUser(ctx), body.athleteId, body.date ?? new Date().toISOString().slice(0, 10));
+    ecosystemSync.publishReadiness(snapshot);
+    return snapshot;
   }),
 
   route('GET', /^\/calibration$/, (ctx) => {
@@ -221,9 +229,11 @@ const server = createServer(async (req, res) => {
 server.listen(port, () => {
   console.log(`Triathlete Energy API listening on http://localhost:${port}`);
   console.log('Starter accounts: coach@local.test / password123, athlete@local.test / password123');
+  ecosystemSync.start();
 });
 
 process.on('SIGINT', () => {
+  ecosystemSync.stop();
   db.close();
   server.close(() => process.exit(0));
 });

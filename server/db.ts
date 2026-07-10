@@ -181,6 +181,29 @@ export class AppDatabase {
         details_json TEXT NOT NULL,
         created_at TEXT NOT NULL
       );
+
+      CREATE TABLE IF NOT EXISTS ecosystem_athlete_links (
+        athlete_id TEXT PRIMARY KEY,
+        shared_athlete_id TEXT NOT NULL,
+        match_method TEXT NOT NULL DEFAULT 'auto-resolve',
+        created_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS ecosystem_outbox (
+        id TEXT PRIMARY KEY,
+        idempotency_key TEXT NOT NULL UNIQUE,
+        payload_type TEXT NOT NULL,
+        athlete_id TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        attempts INTEGER NOT NULL DEFAULT 0,
+        last_error TEXT,
+        created_at TEXT NOT NULL,
+        sent_at TEXT
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_ecosystem_outbox_pending
+        ON ecosystem_outbox (status, created_at);
     `);
   }
 
@@ -743,5 +766,51 @@ export class AppDatabase {
       confidenceLevel: asString(row.confidence_level) as ConfidenceLevel,
       createdAt: asString(row.created_at),
     };
+  }
+
+  // --- Ecosystem sync (hub-and-spoke outbox; ttp-publish-to-hub) -----------
+
+  ecosystemLinkFor(athleteId: string): string | undefined {
+    const row = this.db.prepare('SELECT shared_athlete_id FROM ecosystem_athlete_links WHERE athlete_id = ?').get(athleteId);
+    return row ? asString(row.shared_athlete_id) : undefined;
+  }
+
+  ecosystemStoreLink(athleteId: string, sharedAthleteId: string) {
+    this.db.prepare(`
+      INSERT INTO ecosystem_athlete_links (athlete_id, shared_athlete_id, created_at)
+      VALUES (?, ?, ?)
+      ON CONFLICT(athlete_id) DO UPDATE SET shared_athlete_id = excluded.shared_athlete_id
+    `).run(athleteId, sharedAthleteId, nowIso());
+  }
+
+  ecosystemEnqueue(idempotencyKey: string, payloadType: string, athleteId: string, payloadJson: string): boolean {
+    try {
+      this.db.prepare(`
+        INSERT INTO ecosystem_outbox (id, idempotency_key, payload_type, athlete_id, payload_json, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(randomUUID(), idempotencyKey, payloadType, athleteId, payloadJson, nowIso());
+      return true;
+    } catch {
+      return false; // duplicate idempotency key — already queued/sent
+    }
+  }
+
+  ecosystemPending(limit: number, maxAttempts: number) {
+    return this.db
+      .prepare('SELECT id, idempotency_key, payload_type, athlete_id, payload_json, attempts FROM ecosystem_outbox WHERE status = ? AND attempts < ? ORDER BY created_at ASC LIMIT ?')
+      .all('pending', maxAttempts, limit)
+      .map((row) => ({
+        id: asString(row.id),
+        idempotencyKey: asString(row.idempotency_key),
+        payloadType: asString(row.payload_type),
+        athleteId: asString(row.athlete_id),
+        payloadJson: asString(row.payload_json),
+        attempts: Number(row.attempts),
+      }));
+  }
+
+  ecosystemMark(id: string, status: 'pending' | 'sent' | 'failed', attempts: number, lastError?: string) {
+    this.db.prepare('UPDATE ecosystem_outbox SET status = ?, attempts = ?, last_error = ?, sent_at = ? WHERE id = ?')
+      .run(status, attempts, lastError ?? null, status === 'sent' ? nowIso() : null, id);
   }
 }
