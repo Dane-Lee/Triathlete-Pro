@@ -18,6 +18,13 @@ import type { ReadinessSnapshot } from '../src/shared/domain';
 import { buildTriathlonReadinessDraft } from '../src/shared/ecosystemEnvelope';
 import { SourceApp, SyncPayloadType } from '../src/ecosystem-contracts/enums';
 import { SYNC_SCHEMA_VERSION } from '../src/ecosystem-contracts/envelope';
+import {
+  loadConnectionSettings,
+  outboundState,
+  reportToHub,
+  shouldEnqueue,
+  shouldTransmit,
+} from './connectionSettings';
 
 const PAYLOAD_SCHEMA_VERSION = '1.0.0';
 const MAX_ATTEMPTS = 10;
@@ -80,6 +87,11 @@ export class EcosystemSync {
   publishReadiness(snapshot: ReadinessSnapshot): void {
     this.emitSenti('readiness_updated', 'operational');
     if (!isHubConfigured()) return;
+
+    // Connection switchboard: 'off' stops queuing; 'pause' still queues.
+    const settings = loadConnectionSettings(this.db.dbDir);
+    if (!shouldEnqueue(outboundState(settings, SyncPayloadType.ReadinessSnapshotUpsert))) return;
+
     try {
       const draft = buildTriathlonReadinessDraft(snapshot);
       this.db.ecosystemEnqueue(
@@ -123,9 +135,14 @@ export class EcosystemSync {
     const rows = this.db.ecosystemPending(DRAIN_BATCH, MAX_ATTEMPTS);
     if (rows.length === 0) return report;
 
+    const settings = loadConnectionSettings(this.db.dbDir);
     const envelopes: Record<string, unknown>[] = [];
     const envelopeRows: typeof rows = [];
     for (const row of rows) {
+      // Paused/off flows keep their rows queued untouched — not attempted
+      // this pass, not marked sent/failed, nothing lost.
+      if (!shouldTransmit(outboundState(settings, row.payloadType as SyncPayloadType))) continue;
+
       const sharedAthleteId = await this.resolveSharedAthleteId(row.athleteId);
       if (!sharedAthleteId) {
         report.skipped += 1;
@@ -191,6 +208,7 @@ export class EcosystemSync {
       this.timers.push(setInterval(() => this.emitSenti('triathlete_tracker_heartbeat', 'heartbeat'), HEARTBEAT_INTERVAL_MS));
     }
     if (isHubConfigured()) {
+      void reportToHub(loadConnectionSettings(this.db.dbDir), this.fetchImpl);
       this.timers.push(setInterval(() => void this.drain(), DRAIN_INTERVAL_MS));
     }
   }

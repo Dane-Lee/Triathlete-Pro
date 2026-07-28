@@ -36,9 +36,14 @@ const parseJson = <T>(value: unknown, fallback: T): T => {
 export class AppDatabase {
   private db: DatabaseSyncInstance;
 
+  /** Directory containing the SQLite file; other app-local state (e.g. the
+   * ecosystem connection-settings JSON) lives alongside it, same convention. */
+  readonly dbDir: string;
+
   constructor(path: string) {
     const resolved = resolve(path);
-    mkdirSync(dirname(resolved), { recursive: true });
+    this.dbDir = dirname(resolved);
+    mkdirSync(this.dbDir, { recursive: true });
     this.db = new DatabaseSync(resolved);
     this.db.exec('PRAGMA foreign_keys = ON;');
     this.migrate();
