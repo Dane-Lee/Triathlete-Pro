@@ -24,6 +24,12 @@ import {
   YAxis,
 } from 'recharts';
 import { api, authStore } from './lib/api';
+import { useEcosystemControlCenter } from './lib/useEcosystemControlCenter';
+import {
+  ControlCenter,
+  ControlCenterLauncher,
+  useControlCenterHotkey,
+} from './ecosystem-control-center';
 import {
   AthleteProfile,
   AuthSession,
@@ -410,6 +416,12 @@ function App() {
   const [view, setView] = useState<View>('dashboard');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [controlCenterOpen, setControlCenterOpen] = useState(false);
+  const ecosystem = useEcosystemControlCenter(Boolean(session));
+  useControlCenterHotkey(
+    () => setControlCenterOpen((open) => !open),
+    Boolean(session),
+  );
 
   const selectedAthlete = useMemo(
     () => athletes.find((athlete) => athlete.id === selectedAthleteId) ?? athletes[0],
@@ -532,6 +544,10 @@ function App() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <ControlCenterLauncher
+              status={ecosystem.status}
+              onClick={() => setControlCenterOpen(true)}
+            />
             <ThemeToggle theme={theme} onToggle={toggleTheme} />
             <select value={selectedAthlete?.id ?? ''} onChange={(event) => setSelectedAthleteId(event.target.value)} className="focus-ring rounded-md border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
               {athletes.map((athlete) => <option key={athlete.id} value={athlete.id}>{athlete.name}</option>)}
@@ -545,6 +561,17 @@ function App() {
           </div>
         </div>
       </header>
+
+      <ControlCenter
+        hostApp="triathletePro"
+        status={ecosystem.status}
+        loading={ecosystem.loading}
+        error={ecosystem.error}
+        open={controlCenterOpen}
+        onClose={() => setControlCenterOpen(false)}
+        onRefresh={ecosystem.refresh}
+        onConnectionChange={ecosystem.setConnection}
+      />
 
       <div className="mx-auto max-w-7xl px-6 py-6">
         <nav className="mb-6 flex flex-wrap gap-2">

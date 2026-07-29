@@ -105,3 +105,24 @@ export async function reportToHub(
     // Hub unreachable — no-op; enforcement of pause/off is local regardless.
   }
 }
+
+export async function fetchHubStatus(
+  fetchImpl: typeof fetch = fetch
+): Promise<Record<string, unknown>> {
+  if (!isHubConfigured()) {
+    throw new Error(
+      'AthleteOS hub is not configured. Set ATHLETEOS_HUB_URL and ATHLETEOS_SERVICE_KEY on the Triathlete API.'
+    );
+  }
+  const response = await fetchImpl(`${hubUrl()}/api/ecosystem/status`, {
+    headers: { 'x-service-key': serviceKey() as string },
+  });
+  if (!response.ok) {
+    throw new Error(`AthleteOS status failed (${response.status}): ${await response.text()}`);
+  }
+  const result = await response.json();
+  if (typeof result !== 'object' || result === null || Array.isArray(result)) {
+    throw new Error('AthleteOS status response is malformed.');
+  }
+  return result as Record<string, unknown>;
+}

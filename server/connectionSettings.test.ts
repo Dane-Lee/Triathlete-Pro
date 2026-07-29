@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SyncPayloadType } from '../src/ecosystem-contracts/enums';
 import {
+  fetchHubStatus,
   loadConnectionSettings,
   outboundState,
   reportToHub,
@@ -101,5 +102,34 @@ describe('connectionSettings', () => {
     }) as typeof fetch;
 
     await expect(reportToHub(settings, fakeFetch)).resolves.toBeUndefined();
+  });
+
+  it('fetchHubStatus rejects before making a request when the hub is not configured', async () => {
+    const fakeFetch = (async () => {
+      throw new Error('must not be called');
+    }) as typeof fetch;
+
+    await expect(fetchHubStatus(fakeFetch)).rejects.toThrow(
+      'AthleteOS hub is not configured'
+    );
+  });
+
+  it('fetchHubStatus GETs status with the server-side service key when configured', async () => {
+    process.env.ATHLETEOS_HUB_URL = 'http://hub.test/';
+    process.env.ATHLETEOS_SERVICE_KEY = 'sk';
+    const calls: { url: string; init: RequestInit }[] = [];
+    const fakeFetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      calls.push({ url: String(input), init: init as RequestInit });
+      return new Response(
+        JSON.stringify({ generatedAt: '2026-07-29T00:00:00.000Z', apps: [] }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }) as typeof fetch;
+
+    await expect(fetchHubStatus(fakeFetch)).resolves.toMatchObject({ apps: [] });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe('http://hub.test/api/ecosystem/status');
+    expect(calls[0].init.method).toBeUndefined();
+    expect((calls[0].init.headers as Record<string, string>)['x-service-key']).toBe('sk');
   });
 });

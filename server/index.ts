@@ -3,6 +3,13 @@ import { URL } from 'node:url';
 import { AppDatabase } from './db';
 import { EcosystemSync } from './ecosystemSync';
 import {
+  fetchHubStatus,
+  loadConnectionSettings,
+  reportToHub,
+  saveConnectionSettings,
+} from './connectionSettings';
+import { parseConnectionSettings } from '../src/ecosystem-contracts/connections';
+import {
   CalibrationTest,
   CoefficientSet,
   LoginRequest,
@@ -198,6 +205,45 @@ const routes = [
     const user = requireUser(ctx);
     const input = requireBody<CoefficientSet>(ctx);
     return db.insertCoefficient(input, user.id);
+  }),
+
+  route('GET', /^\/ecosystem\/status$/, async (ctx) => {
+    requireUser(ctx);
+    const status = await fetchHubStatus();
+    const settings = loadConnectionSettings(db.dbDir);
+    const reports = Array.isArray(status.connections) ? status.connections : [];
+    return {
+      ...status,
+      connections: [
+        ...reports.filter(
+          (report) =>
+            typeof report !== 'object' ||
+            report === null ||
+            !('app' in report) ||
+            report.app !== 'triathletePro'
+        ),
+        {
+          app: 'triathletePro',
+          settings,
+          reportedAt: settings.updatedAt,
+        },
+      ],
+    };
+  }),
+
+  route('GET', /^\/ecosystem\/connections$/, (ctx) => {
+    requireUser(ctx);
+    return loadConnectionSettings(db.dbDir);
+  }),
+
+  route('PUT', /^\/ecosystem\/connections$/, async (ctx) => {
+    requireUser(ctx);
+    const settings = saveConnectionSettings(
+      db.dbDir,
+      parseConnectionSettings(ctx.body)
+    );
+    await reportToHub(settings);
+    return settings;
   }),
 
   route('GET', /^\/health$/, () => ({ ok: true, dbPath })),

@@ -10,6 +10,10 @@ import {
   TrainingSession,
   TrainingSessionInput,
 } from '../shared/domain';
+import type {
+  ConnectionChange,
+  EcosystemStatus,
+} from '../ecosystem-control-center';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8787';
 const TOKEN_KEY = 'triathlete-api-token';
@@ -131,6 +135,39 @@ export const api = {
     return request<CalibrationTest>('/calibration', {
       method: 'POST',
       body: JSON.stringify(input),
+    });
+  },
+
+  ecosystemStatus() {
+    return request<EcosystemStatus>('/ecosystem/status');
+  },
+
+  updateEcosystemConnection(
+    status: EcosystemStatus,
+    change: ConnectionChange
+  ) {
+    const current =
+      status.connections.find(report => report.app === 'triathletePro')
+        ?.settings ?? {
+        version: 1,
+        outbound: {},
+        inbound: {},
+        updatedAt: '1970-01-01T00:00:00.000Z',
+      };
+    const direction =
+      typeof current[change.direction] === 'object' &&
+      current[change.direction] !== null
+        ? (current[change.direction] as Record<string, unknown>)
+        : {};
+    return request<Record<string, unknown>>('/ecosystem/connections', {
+      method: 'PUT',
+      body: JSON.stringify({
+        ...current,
+        [change.direction]: {
+          ...direction,
+          [change.payloadType]: change.state,
+        },
+      }),
     });
   },
 };
