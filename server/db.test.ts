@@ -37,6 +37,8 @@ describe('local database workflows', () => {
   it('persists sessions, load metrics, readiness snapshots, and calibration records', () => {
     const coachSession = login();
     const [athlete] = db.listAthletes(coachSession.user);
+    const published: string[] = [];
+    db.onReadinessCalculated((snapshot) => published.push(snapshot.id));
 
     const session = db.createSession(coachSession.user, {
       athleteId: athlete.id,
@@ -62,6 +64,7 @@ describe('local database workflows', () => {
 
     expect(session.calculationTrace.sourceCoefficientVersion).toContain('defaults');
     expect(readiness.athleteId).toBe(athlete.id);
+    expect(published).toContain(readiness.id);
     expect(db.getReadiness(coachSession.user, athlete.id, '2026-05-13').id).toBe(readiness.id);
     expect(db.listCalibrationTests(coachSession.user, athlete.id)[0].id).toBe(calibration.id);
   });

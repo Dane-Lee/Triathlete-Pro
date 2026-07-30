@@ -22,6 +22,7 @@ const port = Number(process.env.TRIATHLETE_API_PORT ?? 8787);
 const dbPath = process.env.TRIATHLETE_DB_PATH ?? './data/triathlete.sqlite';
 const db = new AppDatabase(dbPath);
 const ecosystemSync = new EcosystemSync(db);
+db.onReadinessCalculated((snapshot) => ecosystemSync.publishReadiness(snapshot));
 
 type Handler = (ctx: RequestContext) => Promise<unknown> | unknown;
 
@@ -180,7 +181,6 @@ const routes = [
     const body = requireBody<{ athleteId: string; date?: string }>(ctx);
     if (!body.athleteId) throw new HttpError(400, 'athleteId is required.');
     const snapshot = db.calculateAndStoreReadiness(requireUser(ctx), body.athleteId, body.date ?? new Date().toISOString().slice(0, 10));
-    ecosystemSync.publishReadiness(snapshot);
     return snapshot;
   }),
 

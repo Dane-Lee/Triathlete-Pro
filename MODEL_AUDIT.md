@@ -3,6 +3,8 @@
 ## Implemented Corrections
 
 - One shared calculation module lives in `src/shared/model.ts`.
+- Every stored readiness calculation, including lazy GET calculation, invokes
+  the same publish hook; route choice cannot create hub history gaps.
 - Backend session creation and recomputation call the shared module and persist calculation traces.
 - Inputs use explicit units: meters, seconds, seconds per 100 m, seconds per km, watts, kilograms.
 - Athlete profile values are preferred over defaults.

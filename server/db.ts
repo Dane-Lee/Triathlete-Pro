@@ -35,6 +35,7 @@ const parseJson = <T>(value: unknown, fallback: T): T => {
 
 export class AppDatabase {
   private db: DatabaseSyncInstance;
+  private readinessCalculatedListener?: (snapshot: ReadinessSnapshot) => void;
 
   /** Directory containing the SQLite file; other app-local state (e.g. the
    * ecosystem connection-settings JSON) lives alongside it, same convention. */
@@ -52,6 +53,10 @@ export class AppDatabase {
 
   close() {
     this.db.close();
+  }
+
+  onReadinessCalculated(listener: (snapshot: ReadinessSnapshot) => void) {
+    this.readinessCalculatedListener = listener;
   }
 
   private migrate() {
@@ -550,6 +555,7 @@ export class AppDatabase {
         created_at = excluded.created_at
     `).run(id, athleteId, date, JSON.stringify(payload), createdAt);
     this.audit(user.id, 'readiness:calculate', 'readiness_snapshot', id, { athleteId, date });
+    this.readinessCalculatedListener?.(payload);
     return payload;
   }
 
