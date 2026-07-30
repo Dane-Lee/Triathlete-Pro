@@ -2,6 +2,7 @@ export type Role = 'athlete' | 'coach';
 export type Discipline = 'swim' | 'bike' | 'run';
 export type SessionType = 'training' | 'competition' | 'test';
 export type ConfidenceLevel = 'estimated-default' | 'partially-calibrated' | 'fully-calibrated';
+export type EvidenceMaturity = 'research-provisional' | 'externally-validated';
 export type ReadinessState = 'ready' | 'caution' | 'overload';
 
 export interface User {
@@ -167,6 +168,7 @@ export interface ModelConstants {
 
 export interface CalculationTrace {
   formulaVersion: string;
+  evidenceMaturity?: EvidenceMaturity;
   sourceCoefficientVersion: string;
   confidenceLevel: ConfidenceLevel;
   inputs: Record<string, number | string | boolean | null>;

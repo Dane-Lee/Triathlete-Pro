@@ -76,6 +76,8 @@ export function buildTriathlonReadinessDraft(
     extensions: {
       model: 'triathlon-discipline-based',
       engineVersion: snapshot.sourceCoefficientVersion,
+      formulaVersion: snapshot.calculationTrace.formulaVersion,
+      evidenceMaturity: snapshot.calculationTrace.evidenceMaturity ?? 'research-provisional',
       limitingDiscipline: snapshot.limitingDiscipline,
       recommendation: snapshot.recommendation,
       warnings: snapshot.warnings,

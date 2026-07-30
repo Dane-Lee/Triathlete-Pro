@@ -16,6 +16,11 @@
 - `partially-calibrated`: a reviewed model is active, but some athlete-specific data is missing.
 - `fully-calibrated`: active coefficients and required athlete profile fields are present for the calculation path.
 
+These levels describe athlete-data and coefficient completeness only. They do
+not describe external scientific validation. The current evidence maturity is
+`research-provisional` for every coefficient set, including fully calibrated
+athlete sets.
+
 ## Still Provisional
 
 The formulas need literature review before production coaching use. Priority source areas:
@@ -26,6 +31,10 @@ The formulas need literature review before production coaching use. Priority sou
 - Lactate recovery curve fitting.
 - HRV and readiness scoring.
 - Olbrecht and Mader lactate-model concepts.
+
+The runtime formula version is therefore named
+`tri-model-0.2.0-research-provisional`; the former `audit-reviewed` label was
+removed because an internal code audit is not a literature review.
 
 ## Current Validation Coverage
 

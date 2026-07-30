@@ -39,4 +39,12 @@ The gate checks source hygiene, TypeScript, lint, model tests, database workflow
 
 ## Model Status
 
-Current formulas are provisional. Outputs include source coefficient version, confidence level, warnings, and calculation trace. Defaults are marked as estimated until athlete-specific profile values and calibration-derived coefficients are reviewed and activated.
+Current formulas are research provisional. Outputs include formula version,
+source coefficient version, athlete-data confidence, evidence maturity,
+warnings, and calculation trace. Defaults are marked as estimated until
+athlete-specific profile values and calibration-derived coefficients are
+reviewed and activated. Even a fully calibrated athlete coefficient set is not
+presented as externally validated.
+
+See `EVIDENCE_REGISTER.md` for the source review and production-calibration
+acceptance criteria.

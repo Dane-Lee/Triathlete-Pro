@@ -67,6 +67,9 @@ describe('triathlon calculation model', () => {
     }, athlete, coefficientSet);
 
     expect(result.intensityFactor).toBe(1);
+    expect(result.calculationTrace.formulaVersion).toContain('research-provisional');
+    expect(result.calculationTrace.evidenceMaturity).toBe('research-provisional');
+    expect(result.warnings.join(' ')).toContain('does not constitute external validation');
     expect(result.normalizedLoad).toBe(6.9);
     expect(result.calculationTrace.steps).toContainEqual(expect.objectContaining({
       label: 'run speed',
@@ -145,6 +148,7 @@ describe('triathlon calculation model', () => {
     expect(estimated.confidenceLevel).toBe('estimated-default');
     expect(partial.confidenceLevel).toBe('partially-calibrated');
     expect(complete.confidenceLevel).toBe('fully-calibrated');
+    expect(complete.calculationTrace.evidenceMaturity).toBe('research-provisional');
   });
 
   it('fits calibration regression only when enough paired measurements are present', () => {

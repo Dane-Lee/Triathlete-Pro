@@ -14,7 +14,10 @@ import {
   TrainingSessionInput,
 } from './domain';
 
-export const FORMULA_VERSION = 'tri-model-0.1.0-audit-reviewed';
+export const FORMULA_VERSION = 'tri-model-0.2.0-research-provisional';
+export const MODEL_EVIDENCE_MATURITY = 'research-provisional' as const;
+export const MODEL_EVIDENCE_WARNING =
+  'Research-provisional model: athlete calibration improves input fit but does not constitute external validation or approve the output for injury prediction.';
 
 export const defaultModelConstants: ModelConstants = {
   bodyMassKgDefault: 70,
@@ -261,8 +264,10 @@ export const calculateSessionLoad = (
   const aerobicLoad = normalizedLoad - anaerobicLoad;
 
   const confidenceLevel = inferConfidence(coefficientSet, warnings);
+  warnings.push(MODEL_EVIDENCE_WARNING);
   const trace: CalculationTrace = {
     formulaVersion: FORMULA_VERSION,
+    evidenceMaturity: MODEL_EVIDENCE_MATURITY,
     sourceCoefficientVersion: coefficientSet.version,
     confidenceLevel,
     inputs: {
@@ -350,9 +355,12 @@ export const calculateReadiness = (
   const limitingDiscipline = ranked[0].discipline;
   const overallState = readinessState(Math.min(overallScore, ranked[0].readinessScore + 8), constants);
   const confidenceLevel = coefficientSet.confidenceLevel;
-  const warnings = confidenceLevel === 'estimated-default'
-    ? ['Readiness is based on defaults and should be treated as an estimate until athlete calibration is complete.']
-    : [];
+  const warnings = [
+    ...(confidenceLevel === 'estimated-default'
+      ? ['Readiness is based on defaults and should be treated as an estimate until athlete calibration is complete.']
+      : []),
+    MODEL_EVIDENCE_WARNING,
+  ];
   const recommendation = overallState === 'ready'
     ? `Ready for planned training. Watch ${limitingDiscipline} because it is currently the limiting discipline.`
     : overallState === 'caution'
@@ -360,6 +368,7 @@ export const calculateReadiness = (
       : `Overload risk is elevated. Prioritize recovery before hard ${limitingDiscipline} work.`;
   const calculationTrace: CalculationTrace = {
     formulaVersion: FORMULA_VERSION,
+    evidenceMaturity: MODEL_EVIDENCE_MATURITY,
     sourceCoefficientVersion: coefficientSet.version,
     confidenceLevel,
     inputs: { athleteId, date, sessionCount: athleteSessions.length },

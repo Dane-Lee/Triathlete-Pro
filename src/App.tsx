@@ -596,11 +596,12 @@ function App() {
 
         {selectedAthlete && view === 'dashboard' && (
           <section className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
               <StatCard label="Overall readiness" value={readiness ? `${readiness.overallScore.toFixed(0)}%` : 'n/a'} detail={readiness?.overallState} />
               <StatCard label="Total load" value={formatLoad(totalLoad)} detail={`${sessions.length} sessions`} />
               <StatCard label="Limiting discipline" value={readiness?.limitingDiscipline ?? 'n/a'} detail="Lowest readiness score" />
               <StatCard label="Model confidence" value={activeCoefficient ? confidenceText[activeCoefficient.confidenceLevel] : 'n/a'} detail={activeCoefficient?.version} />
+              <StatCard label="Evidence maturity" value="Research provisional" detail="Not externally validated" />
             </div>
 
             {readiness && (
@@ -736,7 +737,10 @@ function App() {
             <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
               <h2 className="text-lg font-semibold">Coefficient Sets</h2>
               <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                Calculation outputs include source coefficient version, confidence, warnings, and trace steps. The backend is authoritative.
+                Calculation outputs include source coefficient version, athlete-data confidence, evidence maturity, warnings, and trace steps. The backend is authoritative.
+              </p>
+              <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+                Athlete calibration and external model validation are separate. Every current coefficient set remains research provisional.
               </p>
               <button
                 onClick={async () => {
